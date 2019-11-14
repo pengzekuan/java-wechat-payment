@@ -20,7 +20,7 @@ public interface Payment {
      * @param orderNo 平台订单号
      * @return
      */
-    Response cancel(String orderNo);
+    Response cancel(String orderNo) throws RequestFailedException;
 
     /**
      * 退款接口

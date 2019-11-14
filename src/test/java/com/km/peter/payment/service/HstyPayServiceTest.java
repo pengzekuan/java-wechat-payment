@@ -27,4 +27,12 @@ public class HstyPayServiceTest {
         }
 
     }
+
+    @Test
+    public void testCancelOrder() throws JsonProcessingException {
+        Payment payment = new HstyPayService("appId", "merchantId", "key");
+
+        Response response = payment.cancel("123123123");
+        System.out.println(new ObjectMapper().writeValueAsString(response));
+    }
 }

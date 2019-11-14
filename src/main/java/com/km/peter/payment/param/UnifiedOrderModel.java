@@ -1,8 +1,12 @@
 package com.km.peter.payment.param;
 
+import com.km.peter.payment.AbstractPayment;
 import com.km.peter.payment.annotation.AllinPay;
 import com.km.peter.payment.annotation.HstyPay;
 import com.km.peter.payment.annotation.WechatPay;
+import com.km.peter.payment.service.AllinPayService;
+import com.km.peter.payment.service.HstyPayService;
+import com.km.peter.payment.util.StringHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -26,13 +30,13 @@ public class UnifiedOrderModel {
     /**
      * 版本号
      */
-    @HstyPay(value = "version", defaultValue = "2.0")
-    @AllinPay(value = "version", defaultValue = "11")
+    @HstyPay(value = "version", defaultValue = HstyPayService.VERSION)
+    @AllinPay(value = "version", defaultValue = AllinPayService.VERSION)
     private String version;
     /**
      * 字符集
      */
-    @HstyPay(value = "charset", defaultValue = "UTF-8")
+    @HstyPay(value = "charset", defaultValue = HstyPayService.CHARSET)
     private String charset;
     /**
      * 原生JS
@@ -81,9 +85,9 @@ public class UnifiedOrderModel {
      * 签名类型
      * 默认： MD5
      */
-    @WechatPay(value = "sign_type", defaultValue = "MD5")
-    @HstyPay(value = "sign_type", defaultValue = "MD5")
-    @AllinPay(value = "signtype", defaultValue = "MD5")
+    @WechatPay(value = "sign_type", defaultValue = AbstractPayment.SIGN_TYPE)
+    @HstyPay(value = "sign_type", defaultValue = AbstractPayment.SIGN_TYPE)
+    @AllinPay(value = "signtype", defaultValue = AbstractPayment.SIGN_TYPE)
     private String signType;
     /**
      * 商品描述
@@ -265,9 +269,7 @@ public class UnifiedOrderModel {
         this.expireTime = dateFormat.format(calendar.getTime());
         this.validTime = EXPIRE_IN;
 
-        String timestamps = String.valueOf(System.currentTimeMillis());
-        this.nonceStr = timestamps;
-        this.sign = timestamps;
+        this.nonceStr = StringHelper.nonceStr();
         this.body = "暂无说明";
     }
 

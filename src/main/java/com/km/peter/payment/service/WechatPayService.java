@@ -10,8 +10,6 @@ import com.km.peter.payment.exception.FieldMissingException;
 import com.km.peter.payment.param.UnifiedOrderModel;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 微信原生支付
@@ -76,11 +74,8 @@ public class WechatPayService extends AbstractPayment {
         jsonNodes.set("h5_info", root);
 
         try {
-            params.setSceneInfo("fawefawefaw");
-//            params.setSceneInfo(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNodes));
-            Map<String, String> header = new HashMap<>();
-            header.put("Content-Type", "application/xml");
-            return this.unifiedOrder(params, header, WechatPay.class);
+            params.setSceneInfo(jsonNodes.toString());
+            return this.unifiedOrder(params, WechatPay.class);
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         } catch (FieldMissingException e) {

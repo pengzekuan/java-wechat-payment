@@ -21,8 +21,9 @@ import java.util.*;
  */
 public class AllinPayService extends AbstractPayment {
 
+    public static final String VERSION = "11";
     private static final String REQUEST_URI = "https://vsp.allinpay.com/apiweb/unitorder/";
-
+    private static final String CONTENT_TYPE = "application/x-www-form-urlencoded";
     private String applicationId;
 
     public AllinPayService(String wechatAppId, String merchantId, String applicationId, String key) {
@@ -34,6 +35,7 @@ public class AllinPayService extends AbstractPayment {
         this.refundURI = REQUEST_URI + "refund";
         this.scanPayURI = REQUEST_URI + "scanqrpay";
         this.refundQueryURI = REQUEST_URI + "query";
+        this.header.put("Content-Type", CONTENT_TYPE);
     }
 
     @Override
@@ -74,7 +76,7 @@ public class AllinPayService extends AbstractPayment {
         header.put("Content-Type", "application/x-www-form-urlencoded");
 
         try {
-            Response response = this.unifiedOrder(params, header, AllinPay.class);
+            Response response = this.unifiedOrder(params, AllinPay.class);
             if (response == null || !response.isSuccess()) {
                 throw new RequestFailedException("REQUEST_ERROR");
             }

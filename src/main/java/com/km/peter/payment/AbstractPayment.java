@@ -25,6 +25,13 @@ import java.util.TreeMap;
 
 public class AbstractPayment implements Payment {
 
+    public static final String CHARSET = "UTF-8";
+
+    public static final String SIGN_TYPE = "MD5";
+
+    protected Map<String, String> header;
+
+    protected String contentType;
     /**
      * 统一下单接口
      */
@@ -45,31 +52,31 @@ public class AbstractPayment implements Payment {
      * 订单查询接口
      */
     protected String queryURI;
-
     /**
      * 退款单查询接口
      */
     protected String refundQueryURI;
-
     /**
      * 公众号appId
      */
     protected String wechatAppId;
-
     /**
      * 商户号
      */
     protected String merchantId;
-
     /**
      * 商户支付密钥
      */
     protected String key;
 
+    private Request request;
+
     public AbstractPayment(String wechatAppId, String merchantId, String key) {
         this.wechatAppId = wechatAppId;
         this.merchantId = merchantId;
         this.key = key;
+        this.request = RequestFactory.instance(HTTPClientRequest.class);
+        this.header = new HashMap<>();
     }
 
     protected final Map<String, Object> getUnifiedParams(UnifiedOrderModel model,
@@ -196,24 +203,25 @@ public class AbstractPayment implements Payment {
         return XMLUtil.map2XmlString(params);
     }
 
-    protected Response unifiedOrder(UnifiedOrderModel params, Map<String, String> header,
-                                    Class<? extends Annotation> annotationClass) throws NoSuchMethodException, FieldMissingException,
-            IllegalAccessException, InvocationTargetException {
+    protected Response unifiedOrder(UnifiedOrderModel params,
+                                    Class<? extends Annotation> annotationClass) throws NoSuchMethodException,
+            FieldMissingException, IllegalAccessException, InvocationTargetException {
         params.setWechatAppId(this.wechatAppId);
         params.setMerchantId(this.merchantId);
-        Request request = RequestFactory.instance(HTTPClientRequest.class);
-        return request.post(this.unifiedURI, null,
-                this.paramConvertor(this.getUnifiedParams(params, annotationClass)), header);
+        return this.post(this.unifiedURI, this.getUnifiedParams(params, annotationClass));
+    }
+
+    protected Response post(String url, Map<String, Object> params) {
+        return this.request.post(url, null, this.paramConvertor(params), this.header);
     }
 
     @Override
     public Response unifiedOrder(UnifiedOrderModel params) throws RequestFailedException {
-//        return this.unifiedOrder(this.unifiedURI, params);
         return null;
     }
 
     @Override
-    public Response cancel(String orderNo) {
+    public Response cancel(String orderNo) throws RequestFailedException {
         return null;
     }
 
