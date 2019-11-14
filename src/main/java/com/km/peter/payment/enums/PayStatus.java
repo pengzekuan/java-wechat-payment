@@ -1,19 +1,20 @@
 package com.km.peter.payment.enums;
 
-public enum TradeStatus {
+public enum PayStatus {
     SUCCESS("SUCCESS", ""),
     REFUND("REFUND", ""),
     NOTPAY("NOTPAY", ""),
     CLOSED("CLOSED", ""),
     REVOKED("REVOKED", ""),
     USERPAYING("USERPAYING", ""),
-    PAYERROR("PAYERROR", "");
+    PAYERROR("PAYERROR", ""),
+    REVOK("REVOK", "");
 
     private String key;
 
     private String description;
 
-    TradeStatus(String key, String description) {
+    PayStatus(String key, String description) {
         this.key = key;
         this.description = description;
     }

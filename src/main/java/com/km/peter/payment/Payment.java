@@ -28,7 +28,7 @@ public interface Payment {
      * @param orderNo 平台订单号
      * @return
      */
-    Response refund(String orderNo);
+    Response refund(String orderNo) throws RequestFailedException;
 
     /**
      * 指定金额退款接口
@@ -37,7 +37,7 @@ public interface Payment {
      * @param amount  退款金额
      * @return
      */
-    Response refund(String orderNo, int amount);
+    Response refund(String orderNo, int amount) throws RequestFailedException;
 
     /**
      * 交易查询接口
@@ -45,7 +45,7 @@ public interface Payment {
      * @param orderNo 平台订单号
      * @return
      */
-    Response query(String orderNo);
+    Response query(String orderNo) throws RequestFailedException;
 
     /**
      * 交易结果处理
@@ -53,5 +53,5 @@ public interface Payment {
      * @param response 支付通知原始数据
      * @return
      */
-    Object paymentNotify(Object response);
+    Response paymentNotify(Object response) throws RequestFailedException;
 }

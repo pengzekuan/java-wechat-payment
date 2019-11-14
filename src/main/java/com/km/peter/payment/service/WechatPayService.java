@@ -7,6 +7,7 @@ import com.km.peter.payment.AbstractPayment;
 import com.km.peter.payment.annotation.WechatPay;
 import com.km.peter.payment.enums.PaymentScene;
 import com.km.peter.payment.exception.FieldMissingException;
+import com.km.peter.payment.exception.RequestFailedException;
 import com.km.peter.payment.param.UnifiedOrderModel;
 
 import java.lang.reflect.InvocationTargetException;
@@ -64,7 +65,7 @@ public class WechatPayService extends AbstractPayment {
     }
 
     @Override
-    public Response unifiedOrder(UnifiedOrderModel params) {
+    public Response unifiedOrder(UnifiedOrderModel params) throws RequestFailedException {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode jsonNodes = mapper.createObjectNode();
         ObjectNode root = mapper.createObjectNode();
@@ -75,7 +76,7 @@ public class WechatPayService extends AbstractPayment {
 
         try {
             params.setSceneInfo(jsonNodes.toString());
-            return this.unifiedOrder(params, WechatPay.class);
+            return new Response(this.unifiedOrder(params, WechatPay.class));
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         } catch (FieldMissingException e) {

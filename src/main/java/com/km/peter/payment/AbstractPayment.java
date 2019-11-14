@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,8 +27,9 @@ import java.util.TreeMap;
 public class AbstractPayment implements Payment {
 
     public static final String CHARSET = "UTF-8";
-
     public static final String SIGN_TYPE = "MD5";
+
+    protected boolean debug = false;
 
     protected Map<String, String> header;
 
@@ -139,6 +141,9 @@ public class AbstractPayment implements Payment {
 
             if ("".equals(String.valueOf(value)) || "0".equals(String.valueOf(value))) {
                 if (required) {
+                    if (this.debug && Arrays.asList(new String[]{"wechatAppId", "openId"}).contains(fieldName)) {
+                        continue;
+                    }
                     throw new FieldMissingException(realField + " is required");
                 }
                 continue;
@@ -203,16 +208,20 @@ public class AbstractPayment implements Payment {
         return XMLUtil.map2XmlString(params);
     }
 
-    protected Response unifiedOrder(UnifiedOrderModel params,
-                                    Class<? extends Annotation> annotationClass) throws NoSuchMethodException,
-            FieldMissingException, IllegalAccessException, InvocationTargetException {
+    protected Map<String, Object> unifiedOrder(UnifiedOrderModel params,
+                                               Class<? extends Annotation> annotationClass) throws NoSuchMethodException,
+            FieldMissingException, IllegalAccessException, InvocationTargetException, RequestFailedException {
         params.setWechatAppId(this.wechatAppId);
         params.setMerchantId(this.merchantId);
         return this.post(this.unifiedURI, this.getUnifiedParams(params, annotationClass));
     }
 
-    protected Response post(String url, Map<String, Object> params) {
-        return this.request.post(url, null, this.paramConvertor(params), this.header);
+    protected Map<String, Object> response2Map(Response response) throws RequestFailedException {
+        return new HashMap<>();
+    }
+
+    protected Map<String, Object> post(String url, Map<String, Object> params) throws RequestFailedException {
+        return this.response2Map(this.request.post(url, null, this.paramConvertor(params), this.header));
     }
 
     @Override
@@ -226,22 +235,22 @@ public class AbstractPayment implements Payment {
     }
 
     @Override
-    public Response refund(String orderNo) {
+    public Response refund(String orderNo) throws RequestFailedException {
         return null;
     }
 
     @Override
-    public Response refund(String orderNo, int amount) {
+    public Response refund(String orderNo, int amount) throws RequestFailedException {
         return null;
     }
 
     @Override
-    public Response query(String orderNo) {
+    public Response query(String orderNo) throws RequestFailedException {
         return null;
     }
 
     @Override
-    public Object paymentNotify(Object response) {
+    public Response paymentNotify(Object response) throws RequestFailedException {
         return null;
     }
 }

@@ -1,18 +1,19 @@
 package com.km.peter.payment.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.km.peter.http.Response;
 import com.km.peter.payment.AbstractPayment;
 import com.km.peter.payment.annotation.AllinPay;
-import com.km.peter.payment.enums.TradeStatus;
+import com.km.peter.payment.enums.PayStatus;
 import com.km.peter.payment.exception.FieldMissingException;
 import com.km.peter.payment.exception.RequestFailedException;
+import com.km.peter.payment.model.Order;
 import com.km.peter.payment.param.UnifiedOrderModel;
-import com.km.peter.payment.vo.UnifiedOrderVO;
+import com.km.peter.payment.util.StringHelper;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
@@ -22,8 +23,11 @@ import java.util.*;
 public class AllinPayService extends AbstractPayment {
 
     public static final String VERSION = "11";
+
     private static final String REQUEST_URI = "https://vsp.allinpay.com/apiweb/unitorder/";
+
     private static final String CONTENT_TYPE = "application/x-www-form-urlencoded";
+
     private String applicationId;
 
     public AllinPayService(String wechatAppId, String merchantId, String applicationId, String key) {
@@ -72,38 +76,157 @@ public class AllinPayService extends AbstractPayment {
     @Override
     public Response unifiedOrder(UnifiedOrderModel params) throws RequestFailedException {
         params.setApplicationId(this.applicationId);
-        Map<String, String> header = new HashMap<>();
-        header.put("Content-Type", "application/x-www-form-urlencoded");
 
         try {
-            Response response = this.unifiedOrder(params, AllinPay.class);
-            if (response == null || !response.isSuccess()) {
-                throw new RequestFailedException("REQUEST_ERROR");
+            Map<String, Object> res = this.unifiedOrder(params, AllinPay.class);
+
+            if (res.containsKey("message")) {
+                return new Response("", String.valueOf(res.get("message")));
             }
 
-            ObjectMapper mapper = new ObjectMapper();
-            HashMap res = mapper.readValue(String.valueOf(response.getData()), HashMap.class);
-            String retCode = String.valueOf(res.get("retcode"));
-            if ("SUCCESS".equals(retCode) && "0000".equals(String.valueOf(res.get("trxstatus")))) {
+            String orderNo = String.valueOf(res.get("reqsn"));
+            String transNo = String.valueOf(res.get("trxid"));
+            String payInfo = String.valueOf(res.get("payinfo"));
+            Order vo = new Order();
+            vo.setAmount(params.getTotalFee());
+            vo.setOrderNo(orderNo);
+            vo.setTransNo(transNo);
+            vo.setPayInfo(payInfo);
+            vo.setTradeStatus(PayStatus.NOTPAY.getKey());
+            return new Response(vo);
 
-                String orderNo = String.valueOf(res.get("reqsn"));
-                String transNo = String.valueOf(res.get("trxid"));
-                String payInfo = String.valueOf(res.get("payinfo"));
-                UnifiedOrderVO vo = new UnifiedOrderVO();
-                vo.setAmount(params.getTotalFee());
-                vo.setOrderNo(orderNo);
-                vo.setTransNo(transNo);
-                vo.setPayInfo(payInfo);
-                vo.setTransStatus(TradeStatus.NOTPAY.getKey());
-                return new Response(vo);
-            }
-            return new Response("REQUEST_FAILED:",
-                    res.get("retmsg") + ";" + res.get("errmsg"));
-
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | JsonProcessingException | FieldMissingException e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException
+                | FieldMissingException e) {
             System.err.println(e);
         }
 
         return new Response("UNKNOWN_ERROR", "未知错误");
+    }
+
+    @Override
+    public Response cancel(String orderNo) throws RequestFailedException {
+        Map<String, Object> response = this.post(this.cancelURI, this.queryParams(orderNo, null));
+
+        if (response.containsKey("message")) {
+            return new Response("", String.valueOf(response.get("message")));
+        }
+
+        return new Response(null);
+    }
+
+    @Override
+    public Response refund(String orderNo, int amount) throws RequestFailedException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("trxamt", amount);
+        Map<String, Object> response = this.post(this.refundURI, this.queryParams(orderNo, params));
+
+        if (response.containsKey("message")) {
+            return new Response("", String.valueOf(response.get("message")));
+        }
+
+        return new Response(null);
+    }
+
+    private Map<String, Object> queryParams(String orderNo, Map<String, Object> params) {
+
+        if (params == null) {
+            params = new HashMap<>();
+        }
+
+        params.put("cusid", this.merchantId);
+        params.put("appid", this.applicationId);
+        params.put("version", VERSION);
+        params.put("reqsn", orderNo);
+        params.put("randomstr", StringHelper.nonceStr());
+        params.put("sign", this.sign(params));
+        return params;
+    }
+
+    @Override
+    public Response query(String orderNo) throws RequestFailedException {
+
+        Map<String, Object> response = this.post(this.queryURI, this.queryParams(orderNo, null));
+
+        if (response.containsKey("message")) {
+            return new Response("", String.valueOf(response.get("message")));
+        }
+
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setMerchantId(response.get("cusid") + "|" + response.get("appid"));
+        order.setTradeStatus(String.valueOf(response.get("payStatus")));
+
+        order.setOpenId(String.valueOf(response.get("acct")));
+        order.setTransNo(String.valueOf(response.get("trxid")));
+        order.setAmount(Integer.valueOf(String.valueOf(response.get("trxamt"))));
+        order.setAttach(String.valueOf(response.get("attach")));
+        order.setPayTime(String.valueOf(response.get("fintime")));
+
+        return new Response(order);
+
+    }
+
+    @Override
+    protected Map<String, Object> response2Map(Response response) throws RequestFailedException {
+        Map<String, Object> res = new HashMap<>();
+
+        if (response == null || !response.isSuccess()) {
+            throw new RequestFailedException("REQUEST_ERROR");
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> objectMap = mapper.readValue(response.getBytes(), HashMap.class);
+
+            if (!"SUCCESS".equals(String.valueOf(objectMap.get("retcode")))) {
+                res.put("message", String.valueOf(objectMap.get("retcode")));
+                return res;
+            }
+
+            String status = String.valueOf(objectMap.get("trxstatus"));
+
+            if ("1001".equals(status)) {
+                res.put("message", "交易不存在");
+                return res;
+            }
+
+            if (status.startsWith("3")) {
+                res.put("message", objectMap.get("trxstatus") + ":" + objectMap.get("errmsg"));
+                return res;
+            }
+
+            String tradeType = String.valueOf(objectMap.get("trxcode"));
+
+            if (!"0000".equals(status)) {
+                res.put("message", status + ":" + objectMap.get("errmsg"));
+                return res;
+            }
+
+            String payStatus;
+
+            switch (tradeType) {
+                case "VSP501":
+                    payStatus = PayStatus.SUCCESS.getKey();
+                    break;
+                case "VSP503":
+                    payStatus = PayStatus.REFUND.getKey();
+                    break;
+                default:
+                    payStatus = PayStatus.CLOSED.getKey();
+                    break;
+            }
+
+            res.putAll(objectMap);
+            res.put("payStatus", payStatus);
+        } catch (IOException e) {
+            System.err.println(e);
+
+        }
+        return res;
+    }
+
+    @Override
+    public Response paymentNotify(Object response) throws RequestFailedException {
+        return super.paymentNotify(response);
     }
 }
