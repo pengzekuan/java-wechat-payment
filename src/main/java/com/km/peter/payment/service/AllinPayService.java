@@ -23,11 +23,8 @@ import java.util.*;
 public class AllinPayService extends AbstractPayment {
 
     public static final String VERSION = "11";
-
+    public static final String CONTENT_TYPE = "application/x-www-form-urlencoded";
     private static final String REQUEST_URI = "https://vsp.allinpay.com/apiweb/unitorder/";
-
-    private static final String CONTENT_TYPE = "application/x-www-form-urlencoded";
-
     private String applicationId;
 
     public AllinPayService(String wechatAppId, String merchantId, String applicationId, String key) {
@@ -40,6 +37,22 @@ public class AllinPayService extends AbstractPayment {
         this.scanPayURI = REQUEST_URI + "scanqrpay";
         this.refundQueryURI = REQUEST_URI + "query";
         this.header.put("Content-Type", CONTENT_TYPE);
+    }
+
+    public static Response paymentNotify(Map<String, Object> map) {
+
+        String orderNo = String.valueOf(map.get("cusorderid"));
+
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setMerchantId(map.get("cusid") + "|" + map.get("appid"));
+        order.setOpenId(String.valueOf(map.get("acct")));
+        order.setTransNo(String.valueOf(map.get("trxid")));
+        order.setAmount(Integer.valueOf(String.valueOf(map.get("trxamt"))));
+        order.setPayTime(String.valueOf(map.get("paytime")));
+        order.setTradeStatus(PayStatus.SUCCESS.getKey());
+
+        return new Response(order);
     }
 
     @Override
@@ -223,10 +236,5 @@ public class AllinPayService extends AbstractPayment {
 
         }
         return res;
-    }
-
-    @Override
-    public Response paymentNotify(Object response) throws RequestFailedException {
-        return super.paymentNotify(response);
     }
 }

@@ -46,12 +46,4 @@ public interface Payment {
      * @return
      */
     Response query(String orderNo) throws RequestFailedException;
-
-    /**
-     * 交易结果处理
-     *
-     * @param response 支付通知原始数据
-     * @return
-     */
-    Response paymentNotify(Object response) throws RequestFailedException;
 }

@@ -10,8 +10,14 @@ import com.km.peter.payment.annotation.WechatPay;
 import com.km.peter.payment.exception.FieldMissingException;
 import com.km.peter.payment.exception.RequestFailedException;
 import com.km.peter.payment.param.UnifiedOrderModel;
+import com.km.peter.payment.service.AllinPayService;
+import com.km.peter.payment.service.HstyPayService;
 import com.km.peter.payment.util.XMLUtil;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -19,10 +25,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class AbstractPayment implements Payment {
 
@@ -79,6 +82,54 @@ public class AbstractPayment implements Payment {
         this.key = key;
         this.request = RequestFactory.instance(HTTPClientRequest.class);
         this.header = new HashMap<>();
+    }
+
+    public static Response paymentNotify(HttpServletRequest request) {
+        String contentType = request.getContentType();
+
+        Map<String, Object> map = new HashMap<>();
+
+        if (contentType.startsWith(HstyPayService.CONTENT_TYPE)) {
+            StringBuilder stringBuffer = new StringBuilder();
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
+                String tmpStr;
+                while ((tmpStr = reader.readLine()) != null) {
+                    stringBuffer.append(tmpStr);
+                }
+                System.out.println("stream:" + stringBuffer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    Objects.requireNonNull(reader).close();
+                } catch (IOException e) {
+                    System.err.println(e);
+                }
+
+            }
+            map = XMLUtil.xml2Map(stringBuffer.toString());
+
+            return HstyPayService.paymentNotify(map);
+
+        }
+
+        if (contentType.startsWith(AllinPayService.CONTENT_TYPE)) {
+
+            Enumeration<String> keys = request.getParameterNames();
+            if (keys == null) {
+                return null;
+            }
+            while (keys.hasMoreElements()) {
+                String key = keys.nextElement();
+                map.put(key, request.getParameter(key));
+            }
+
+            return AllinPayService.paymentNotify(map);
+        }
+
+        return null;
     }
 
     protected final Map<String, Object> getUnifiedParams(UnifiedOrderModel model,
@@ -246,11 +297,6 @@ public class AbstractPayment implements Payment {
 
     @Override
     public Response query(String orderNo) throws RequestFailedException {
-        return null;
-    }
-
-    @Override
-    public Response paymentNotify(Object response) throws RequestFailedException {
         return null;
     }
 }

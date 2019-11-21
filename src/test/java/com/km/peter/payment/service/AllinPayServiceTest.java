@@ -10,6 +10,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Calendar;
+import java.util.Date;
+
 public class AllinPayServiceTest {
 
     private String openId = "oWZkgwp5MfVg6lvRuvNquWr2MjGA";
@@ -25,6 +28,12 @@ public class AllinPayServiceTest {
     @Before
     public void before() {
         this.payment = new AllinPayService("wx539072349149ec78", "560731073991L7U", "00171161", "34f5540b12a34b8e80fccfe4dcce0d77");
+
+        System.out.println("currentTime:" + System.currentTimeMillis());
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date());
+        calendar.add(Calendar.MONTH, 1);
+        System.out.println("nextTime:" + calendar.getTimeInMillis());
     }
 
     @Test

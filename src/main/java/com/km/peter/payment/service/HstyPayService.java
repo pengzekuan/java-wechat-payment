@@ -26,9 +26,9 @@ public class HstyPayService extends AbstractPayment {
 
     public static final String VERSION = "2.0";
 
-    private static final String REQUEST_URI = "https://pay.hstypay.com/v2/pay/gateway";
+    public static final String CONTENT_TYPE = "application/xml";
 
-    private static final String CONTENT_TYPE = "application/xml";
+    private static final String REQUEST_URI = "https://pay.hstypay.com/v2/pay/gateway";
 
     private static final String REFUND_CHANNEL = "ORIGINAL";
 
@@ -53,6 +53,27 @@ public class HstyPayService extends AbstractPayment {
         this.contentType = CONTENT_TYPE;
         this.header.put("Content-Type", CONTENT_TYPE);
         this.debug = true;
+    }
+
+    public static Response paymentNotify(Map<String, Object> map) {
+
+        if (!"0".equals(map.get("pay_result"))) {
+            return new Response("PAYMENT_FAILED", String.valueOf(map.get("pay_info")));
+        }
+
+        String orderNo = String.valueOf(map.get("out_trade_no"));
+
+        Order order = new Order();
+        order.setOrderNo(orderNo);
+        order.setWechatAppId(String.valueOf(map.get("sub_appid")));
+        order.setOpenId(String.valueOf(map.get("sub_openid")));
+        order.setTransNo(String.valueOf(map.get("transaction_id")));
+        order.setAmount(Integer.valueOf(String.valueOf(map.get("total_fee"))));
+        order.setAttach(String.valueOf(map.get("attach")));
+        order.setPayTime(String.valueOf(map.get("time_end")));
+        order.setTradeStatus(PayStatus.SUCCESS.getKey());
+
+        return new Response(order);
     }
 
     @Override
@@ -206,29 +227,6 @@ public class HstyPayService extends AbstractPayment {
         List<RefundOrder> refundOrders = new ArrayList<>();
         refundOrders.add(refundOrder);
         order.setRefundOrders(refundOrders);
-
-        return new Response(order);
-    }
-
-    @Override
-    public Response paymentNotify(Object response) throws RequestFailedException {
-        Map<String, Object> map = response2Map(new Response(response));
-
-        if (!"0".equals(map.get("pay_result"))) {
-            return new Response("PAYMENT_FAILED", String.valueOf(map.get("pay_info")));
-        }
-
-        String orderNo = String.valueOf(map.get("out_trade_no"));
-
-        Order order = new Order();
-        order.setOrderNo(orderNo);
-        order.setWechatAppId(String.valueOf(map.get("sub_appid")));
-        order.setOpenId(String.valueOf(map.get("sub_openid")));
-        order.setTransNo(String.valueOf(map.get("transaction_id")));
-        order.setAmount(Integer.valueOf(String.valueOf(map.get("total_fee"))));
-        order.setAttach(String.valueOf(map.get("attach")));
-        order.setPayTime(String.valueOf(map.get("time_end")));
-        order.setTradeStatus(PayStatus.SUCCESS.getKey());
 
         return new Response(order);
     }
